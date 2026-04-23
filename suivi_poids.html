@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi Poids</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #fff; color: #37352f; padding: 24px 20px 60px; max-width: 900px; margin: 0 auto; }
+
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #9b9a97; margin-bottom: 20px; }
+
+  /* STATS */
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-bottom: 20px; }
+  .stat { border: 1px solid #e9e9e7; border-radius: 8px; padding: 10px 12px; background: #fafaf9; }
+  .stat-l { font-size: 10px; color: #9b9a97; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+  .stat-v { font-size: 20px; font-weight: 600; line-height: 1.1; }
+  .stat-s { font-size: 10px; color: #9b9a97; margin-top: 2px; }
+  .s-ok    { border-left: 3px solid #16a34a; }
+  .s-warn  { border-left: 3px solid #ea580c; }
+  .s-goal  { border-left: 3px solid #2563eb; }
+  .s-neutral { border-left: 3px solid #9b9a97; }
+
+  /* CHART */
+  .chart-wrap { border: 1px solid #e9e9e7; border-radius: 10px; padding: 20px; margin-bottom: 20px; background: #fafaf9; }
+  .chart-title { font-size: 12px; font-weight: 600; color: #6b6b6b; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+  canvas { width: 100% !important; }
+
+  /* INPUT SECTION */
+  .input-section { border: 1px solid #e9e9e7; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .input-title { font-size: 12px; font-weight: 600; color: #37352f; margin-bottom: 12px; }
+  .input-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 8px; }
+  label { font-size: 11px; color: #6b6b6b; display: block; margin-bottom: 3px; }
+  input[type="date"], input[type="number"], select {
+    border: 1px solid #e9e9e7; border-radius: 6px; padding: 7px 10px;
+    font-size: 12px; font-family: 'Inter', sans-serif; color: #37352f;
+    background: #fff; outline: none; transition: border 0.15s;
+  }
+  input[type="date"]:focus, input[type="number"]:focus, select:focus { border-color: #2563eb; }
+  input[type="number"] { width: 100px; }
+  input[type="date"] { width: 150px; }
+  select { width: 160px; }
+
+  .btn { padding: 7px 16px; border-radius: 6px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+  .btn-add { background: #2563eb; color: white; }
+  .btn-add:hover { background: #1d4ed8; }
+  .btn-del { background: #fde8e8; color: #b91c1c; border: 1px solid #fca5a5; }
+  .btn-del:hover { background: #fca5a5; }
+  .btn-export { background: #f7f6f3; color: #37352f; border: 1px solid #e9e9e7; }
+  .btn-export:hover { background: #e9e9e7; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead tr { background: #f7f6f3; }
+  th { padding: 8px 10px; text-align: left; font-weight: 500; font-size: 11px; color: #6b6b6b; border: 1px solid #e9e9e7; }
+  td { padding: 7px 10px; border: 1px solid #e9e9e7; }
+  tr:hover td { background: #f9f9f8; }
+  .phase-regles { background: #fde8e8; color: #b91c1c; font-size: 10px; padding: 1px 6px; border-radius: 3px; }
+  .phase-normal { background: #d3f8e2; color: #14532d; font-size: 10px; padding: 1px 6px; border-radius: 3px; }
+  .phase-post { background: #dbeafe; color: #1e3a8a; font-size: 10px; padding: 1px 6px; border-radius: 3px; }
+  .diff-pos { color: #16a34a; font-weight: 500; }
+  .diff-neg { color: #dc2626; font-weight: 500; }
+  .diff-neu { color: #9b9a97; }
+
+  /* GOAL BAR */
+  .goal-section { border: 1px solid #dbeafe; border-radius: 8px; padding: 12px 14px; background: #eff6ff; margin-bottom: 16px; }
+  .goal-title { font-size: 11px; font-weight: 600; color: #1e3a8a; margin-bottom: 8px; }
+  .goal-bar-track { background: #bfdbfe; border-radius: 99px; height: 10px; overflow: hidden; margin-bottom: 4px; }
+  .goal-bar-fill { height: 10px; border-radius: 99px; background: #2563eb; transition: width 0.5s; }
+  .goal-labels { display: flex; justify-content: space-between; font-size: 10px; color: #3b82f6; }
+
+  /* RULES BOX */
+  .rules { background: #f7f6f3; border-radius: 8px; padding: 12px 14px; font-size: 11px; color: #6b6b6b; line-height: 1.7; }
+  .rules strong { color: #37352f; }
+
+  .empty-state { text-align: center; padding: 30px; color: #9b9a97; font-size: 12px; }
+
+  @media (max-width: 500px) {
+    .input-row { flex-direction: column; align-items: stretch; }
+    input[type="number"], input[type="date"], select { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<h1>⚖️ Suivi du poids</h1>
+<div class="subtitle">Objectif : 60 kg avant l'été · Départ : 57 kg · IMC cible : 20,8</div>
+
+<!-- STATS -->
+<div class="stats" id="statsGrid">
+  <div class="stat s-neutral"><div class="stat-l">Poids actuel</div><div class="stat-v" id="statCurrent">57,0 <span style="font-size:13px;font-weight:400">kg</span></div><div class="stat-s">Point de départ</div></div>
+  <div class="stat s-goal"><div class="stat-l">Objectif</div><div class="stat-v">60,0 <span style="font-size:13px;font-weight:400">kg</span></div><div class="stat-s">Avant fin juin 2026</div></div>
+  <div class="stat s-warn"><div class="stat-l">Manque</div><div class="stat-v" id="statRemaining">3,0 <span style="font-size:13px;font-weight:400">kg</span></div><div class="stat-s" id="statWeeks">~9 semaines</div></div>
+  <div class="stat s-neutral"><div class="stat-l">IMC actuel</div><div class="stat-v" id="statBMI">19,7</div><div class="stat-s">Normal (18,5–24,9)</div></div>
+</div>
+
+<!-- BARRE DE PROGRESSION -->
+<div class="goal-section">
+  <div class="goal-title">Progression vers l'objectif</div>
+  <div class="goal-bar-track"><div class="goal-bar-fill" id="goalBar" style="width:0%"></div></div>
+  <div class="goal-labels"><span>57 kg (départ)</span><span id="goalPct">0%</span><span>60 kg (objectif)</span></div>
+</div>
+
+<!-- GRAPHIQUE -->
+<div class="chart-wrap">
+  <div class="chart-title">
+    <span>Courbe de poids</span>
+    <span style="font-size:10px;color:#9b9a97">Objectif en pointillés bleus</span>
+  </div>
+  <div style="position:relative;height:260px;">
+    <canvas id="weightChart"></canvas>
+  </div>
+</div>
+
+<!-- SAISIE -->
+<div class="input-section">
+  <div class="input-title">Ajouter une pesée</div>
+  <div class="input-row">
+    <div>
+      <label>Date</label>
+      <input type="date" id="inputDate">
+    </div>
+    <div>
+      <label>Poids (kg)</label>
+      <input type="number" id="inputWeight" min="40" max="100" step="0.1" placeholder="57.0">
+    </div>
+    <div>
+      <label>Phase du cycle</label>
+      <select id="inputPhase">
+        <option value="normal">Hors règles</option>
+        <option value="regles">Pendant les règles</option>
+        <option value="post">Post-règles</option>
+      </select>
+    </div>
+    <div>
+      <label>&nbsp;</label>
+      <button class="btn btn-add" onclick="addEntry()">+ Ajouter</button>
+    </div>
+  </div>
+  <div id="inputError" style="font-size:11px;color:#dc2626;margin-top:4px;display:none"></div>
+</div>
+
+<!-- TABLEAU -->
+<div class="table-wrap">
+  <table id="weightTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Poids</th>
+        <th>IMC</th>
+        <th>Variation</th>
+        <th>Phase</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <tr><td colspan="6" class="empty-state">Aucune pesée enregistrée — ajoute ta première mesure ci-dessus</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- EXPORT -->
+<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+  <button class="btn btn-export" onclick="exportCSV()">↓ Exporter CSV</button>
+  <button class="btn btn-del" onclick="clearAll()">🗑 Effacer tout</button>
+</div>
+
+<!-- CONSEILS -->
+<div class="rules">
+  <strong>📋 Rappels</strong><br>
+  Se peser le matin à jeun, après les toilettes, même jour de la semaine.<br>
+  <strong>+300 à 400 kcal/jour</strong> hors règles pour atteindre +300–400g/semaine.<br>
+  Pendant les règles : objectif maintien — smoothies caloriques, aliments froids, gingembre anti-nausées.<br>
+  <strong>Compléments clés pour la prise de poids :</strong> Zinc + Ashwagandha + Myo-inositol (correction hormonale).
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const HEIGHT = 1.70;
+const GOAL = 60.0;
+const START = 57.0;
+const DEADLINE = new Date('2026-06-30');
+
+let entries = JSON.parse(localStorage.getItem('weight_data') || '[]');
+let chart = null;
+
+// Init date to today
+document.getElementById('inputDate').valueAsDate = new Date();
+
+function bmi(w) { return (w / (HEIGHT * HEIGHT)).toFixed(1); }
+
+function weeksUntilDeadline() {
+  const now = new Date();
+  const diff = DEADLINE - now;
+  return Math.max(0, Math.round(diff / (7 * 24 * 3600 * 1000)));
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function save() { localStorage.setItem('weight_data', JSON.stringify(entries)); }
+
+function addEntry() {
+  const date = document.getElementById('inputDate').value;
+  const weight = parseFloat(document.getElementById('inputWeight').value);
+  const phase = document.getElementById('inputPhase').value;
+  const err = document.getElementById('inputError');
+
+  if (!date) { err.textContent = 'Veuillez sélectionner une date.'; err.style.display = 'block'; return; }
+  if (isNaN(weight) || weight < 40 || weight > 100) { err.textContent = 'Poids invalide (entre 40 et 100 kg).'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+
+  // Remove duplicate date
+  entries = entries.filter(e => e.date !== date);
+  entries.push({ date, weight, phase });
+  entries.sort((a, b) => a.date.localeCompare(b.date));
+  save();
+  render();
+  document.getElementById('inputWeight').value = '';
+}
+
+function deleteEntry(date) {
+  entries = entries.filter(e => e.date !== date);
+  save();
+  render();
+}
+
+function clearAll() {
+  if (confirm('Effacer toutes les pesées ?')) { entries = []; save(); render(); }
+}
+
+function exportCSV() {
+  let csv = 'Date,Poids (kg),IMC,Phase\n';
+  entries.forEach(e => { csv += `${formatDate(e.date)},${e.weight},${bmi(e.weight)},${e.phase}\n`; });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'suivi_poids.csv';
+  a.click();
+}
+
+function render() {
+  renderStats();
+  renderTable();
+  renderChart();
+}
+
+function renderStats() {
+  const current = entries.length > 0 ? entries[entries.length - 1].weight : START;
+  const remaining = Math.max(0, GOAL - current).toFixed(1);
+  const pct = Math.min(100, Math.max(0, ((current - START) / (GOAL - START)) * 100)).toFixed(0);
+  const weeks = weeksUntilDeadline();
+
+  document.getElementById('statCurrent').innerHTML = `${current.toFixed(1)} <span style="font-size:13px;font-weight:400">kg</span>`;
+  document.getElementById('statRemaining').innerHTML = `${remaining} <span style="font-size:13px;font-weight:400">kg</span>`;
+  document.getElementById('statWeeks').textContent = `~${weeks} semaines restantes`;
+  document.getElementById('statBMI').textContent = bmi(current);
+  document.getElementById('goalBar').style.width = pct + '%';
+  document.getElementById('goalPct').textContent = pct + '%';
+
+  // Color stat card
+  const statCard = document.getElementById('statCurrent').parentElement;
+  statCard.className = 'stat ' + (current >= GOAL ? 's-ok' : current >= GOAL - 1 ? 's-warn' : 's-neutral');
+  const remCard = document.getElementById('statRemaining').parentElement;
+  remCard.className = 'stat ' + (parseFloat(remaining) <= 0 ? 's-ok' : parseFloat(remaining) <= 1 ? 's-warn' : 's-warn');
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  if (entries.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Aucune pesée enregistrée</td></tr>';
+    return;
+  }
+  const rows = [...entries].reverse().map((e, i, arr) => {
+    const prev = arr[i + 1];
+    let diffHtml = '<span class="diff-neu">—</span>';
+    if (prev) {
+      const diff = (e.weight - prev.weight).toFixed(1);
+      const cls = diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : 'diff-neu';
+      const sign = diff > 0 ? '+' : '';
+      diffHtml = `<span class="${cls}">${sign}${diff} kg</span>`;
+    }
+    const phaseMap = { regles: '<span class="phase-regles">🔴 Règles</span>', normal: '<span class="phase-normal">✓ Hors règles</span>', post: '<span class="phase-post">↩ Post-règles</span>' };
+    return `<tr>
+      <td>${formatDate(e.date)}</td>
+      <td><strong>${e.weight.toFixed(1)} kg</strong></td>
+      <td>${bmi(e.weight)}</td>
+      <td>${diffHtml}</td>
+      <td>${phaseMap[e.phase] || ''}</td>
+      <td><button class="btn btn-del" onclick="deleteEntry('${e.date}')" style="padding:3px 8px;font-size:10px">✕</button></td>
+    </tr>`;
+  });
+  tbody.innerHTML = rows.join('');
+}
+
+function renderChart() {
+  const ctx = document.getElementById('weightChart').getContext('2d');
+
+  // Build labels and data
+  const labels = [];
+  const dataPoints = [];
+  const pointColors = [];
+  const pointRadii = [];
+
+  entries.forEach(e => {
+    labels.push(formatDate(e.date));
+    dataPoints.push(e.weight);
+    const c = e.phase === 'regles' ? '#ef4444' : e.phase === 'post' ? '#3b82f6' : '#16a34a';
+    pointColors.push(c);
+    pointRadii.push(5);
+  });
+
+  // Goal line — two points: today and deadline
+  const today = new Date();
+  const todayStr = today.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const deadlineStr = DEADLINE.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  // Add today and deadline to labels if not present
+  const allLabels = [...new Set([...labels, todayStr, deadlineStr])].sort((a, b) => {
+    const pa = a.split('/').reverse().join('');
+    const pb = b.split('/').reverse().join('');
+    return pa.localeCompare(pb);
+  });
+
+  const mainData = allLabels.map(l => {
+    const idx = labels.indexOf(l);
+    return idx !== -1 ? dataPoints[idx] : null;
+  });
+
+  const goalData = allLabels.map(l => {
+    if (l === todayStr) return entries.length > 0 ? entries[entries.length - 1].weight : START;
+    if (l === deadlineStr) return GOAL;
+    return null;
+  });
+
+  const ptColors = allLabels.map(l => {
+    const idx = labels.indexOf(l);
+    if (idx === -1) return 'transparent';
+    return pointColors[idx];
+  });
+
+  const ptRadii = allLabels.map(l => labels.indexOf(l) !== -1 ? 5 : 0);
+
+  if (chart) { chart.destroy(); }
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: allLabels,
+      datasets: [
+        {
+          label: 'Poids mesuré',
+          data: mainData,
+          borderColor: '#37352f',
+          borderWidth: 2,
+          pointBackgroundColor: ptColors,
+          pointBorderColor: ptColors,
+          pointRadius: ptRadii,
+          pointHoverRadius: 7,
+          tension: 0.3,
+          fill: false,
+          spanGaps: false,
+        },
+        {
+          label: 'Trajectoire objectif',
+          data: goalData,
+          borderColor: '#2563eb',
+          borderWidth: 1.5,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          fill: false,
+          spanGaps: true,
+          tension: 0,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.datasetIndex === 0
+              ? ` ${ctx.parsed.y?.toFixed(1)} kg`
+              : ` Objectif : ${ctx.parsed.y?.toFixed(1)} kg`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { font: { size: 10 }, maxRotation: 45, color: '#9b9a97' },
+          grid: { color: '#f0f0ef' }
+        },
+        y: {
+          min: 54,
+          max: 62,
+          ticks: {
+            font: { size: 10 },
+            color: '#9b9a97',
+            callback: v => v + ' kg',
+            stepSize: 1
+          },
+          grid: { color: '#f0f0ef' }
+        }
+      }
+    }
+  });
+
+  // Draw goal line annotation manually
+}
+
+// Legend custom
+function renderLegend() {
+  // handled by point colors
+}
+
+render();
+</script>
+</body>
+</html>
